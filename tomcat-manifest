@@ -1,0 +1,39 @@
+1.	vim Dockerfile
+FROM openjdk:8 as builder
+RUN apt-get update -y && apt-get install maven -y
+WORKDIR /mnt
+COPY student-ui /mnt/student-ui
+WORKDIR /mnt/student-ui
+RUN mvn package
+
+FROM tomcat
+RUN rm -rvf /usr/local/tomcat/webapps
+RUN mv /usr/local/tomcat/webapps.dist /usr/local/tomcat/webapps
+COPY --from=builder /mnt/student-ui/target/*.war /usr/local/tomcat/webapps
+CMD /usr/local/tomcat/bin/startup.sh; sleep inf
+
+docker build -t img .
+docker images
+docker tag img himanshumudholkar/tomcat:v1
+docker images
+docker login
+docker push himanshumudholkar/tomcat:v1
+
+2.	vim pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: tomcat-pod
+  labels:
+    app: tompod
+spec:
+  containers:
+    - name: tommy
+      image: himanshumudholkar/tomcat
+      ports:
+        - containerPort: 8080
+
+kubectl apply -f pod.yml
+kubectl get pods
+kubectl exec tomcat-pod -it -c tommy -- /bin/bash
+(IN POD) curl localhost:8080
